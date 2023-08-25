@@ -6,7 +6,7 @@ warnings.filterwarnings('ignore')
 import pandas as pd
 import numpy as np
 from datetime import datetime
-# import snowflake.connector as sf
+import snowflake.connector as sf
 import numpy as np
 from GoogleNews import GoogleNews
 from datetime import timedelta
@@ -22,8 +22,39 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 
+def views_prediction2(string):
+    # create a connection object
+    conn = sf.connect(
+        user='ankan',
+        password='ankanProboReset@123',
+        account='rl48423.ap-south-1.aws',
+        database='MELTANO_DB',
+        schema='PROBO_ANALYTICS'
+    )
+    cursor = conn.cursor()
+    cursor.execute(string)
+    data = cursor.fetchall()
+    df = pd.DataFrame(data, columns=[desc[0] for desc in cursor.description])
+    return df
 
-df_ori = pd.read_csv(r'file1.csv')
+string = '''
+with right_events as (select distinct event_id ids from (select event_id,max(created_dt) max_dt,min(created_dt) min_dt,
+datediff(days,min_dt,max_dt) dt_diff from 
+(select event_id,created_dt, datediff(days ,created_dt, current_timestamp()) days_old 
+from probo_analytics.tms_trade having days_old<=180)tb1 group by event_id having dt_diff>=30)tb2)
+
+select table_2.NAME,table_2.description,table_1.event_id,table_1.CREATED_DT,table_1.BUY_PRICE from 
+(select event_id,CREATED_DT,BUY_PRICE from PROBO_ANALYTICS.tms_trade where event_id  in (
+select distinct event_id from (
+select event_id, min(avg_daily) min_price,max(avg_daily) max_price,max_price-min_price price_diff from
+(select event_id,dt,avg(buy_price) avg_daily from 
+(select event_id,cast(created_dt as date) dt,buy_price from 
+probo_analytics.tms_trade where event_id in (select ids from right_events))t group by event_id,dt)t2 
+group by event_id having price_diff>=6.5)tb3
+)) as table_1
+left join probo_analytics.events as table_2 on table_1.event_id = table_2.id ;'''
+
+df_ori = views_prediction2(string)
 
 def preprocess(sentence):
     sentence=str(sentence)
