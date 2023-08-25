@@ -54,7 +54,6 @@ group by event_id having price_diff>=6.5)tb3
 )) as table_1
 left join probo_analytics.events as table_2 on table_1.event_id = table_2.id ;'''
 
-df_ori = views_prediction2(string)
 
 def preprocess(sentence):
     sentence=str(sentence)
@@ -89,6 +88,8 @@ def get_news(time_stamp,title,gap = 60):
     result=googlenews.result()
     df=pd.DataFrame(result)
     return df
+
+df_ori = pd.read_csv('file1.csv')
 
 def process(input_value,df_ori):
     df = df_ori.drop(['Unnamed: 0'], axis='columns')
